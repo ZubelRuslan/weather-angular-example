@@ -1,33 +1,41 @@
-import {Component, OnInit} from '@angular/core';
-import {Observable} from 'rxjs';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {BehaviorSubject, Observable, Subject, Subscription} from 'rxjs';
 
 import {City} from '../interfaces/city.interface';
 import {WeatherService} from '../weather.service';
 import {Weather} from '../interfaces/weather.interface';
+import {map} from 'rxjs/operators';
 
 @Component({
   selector: 'app-city',
   templateUrl: './city.component.html',
   styleUrls: ['./city.component.scss']
 })
-export class CityComponent implements OnInit {
+export class CityComponent implements OnInit, OnDestroy {
   constructor(private weatherService: WeatherService) { }
 
-  cities: City[] = [];
-  cities$: Observable<City[]>;
-  weatherData$: Observable<Weather>;
+  cities: City[];
+  cities$: Subscription;
+  weatherData$: Observable<Observable<Weather>>;
   selectedCity: City;
+  city$: Subject<any> = new BehaviorSubject('');
 
   ngOnInit(): void {
-    this.getCities();
-    this.cities$ = this.weatherService.getCities();
+    this.cities$ = this.getCities().subscribe(cities => {
+      this.cities = cities;
+    });
+
+    this.weatherData$ = this.city$.pipe(
+      map((cityData: any) => {
+        if (cityData) {
+          return this.weatherService.getWeather(cityData.lat, cityData.lng);
+        }
+      })
+    );
   }
 
-  getCities(): void {
-    this.weatherService.getCities()
-      .subscribe(cities => {
-        this.cities = cities;
-      });
+  getCities(): Observable<City[]> {
+    return this.weatherService.getCities();
   }
 
   findCity(name): City {
@@ -36,6 +44,10 @@ export class CityComponent implements OnInit {
 
   getWeather(): void {
     const cityData: City = this.findCity(this.selectedCity);
-    this.weatherData$ = this.weatherService.getWeather(cityData.lat, cityData.lng);
+    this.city$.next(cityData);
+  }
+
+  ngOnDestroy(): void {
+      this.cities$.unsubscribe();
   }
 }
