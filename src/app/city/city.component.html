@@ -1,0 +1,20 @@
+<form name="myForm">
+  <label>
+    <select name="language" (change)="getWeather()" [(ngModel)]="selectedCity" required>
+      <option selected disabled>Выберите город</option>
+      <option *ngFor="let city of (cities$ | async)">
+        {{ city.name }}
+      </option>
+    </select>
+  </label>
+</form>
+<ng-container *ngIf="weatherData$ | async as weatherData">
+  <div *ngFor="let day of weatherData.days; let i = index">
+  <span>
+    {{day}}:
+  </span>
+    <span>
+    Днём: {{weatherData.weather[i].day}}, Ночью: {{weatherData.weather[i].night}}
+  </span>
+  </div>
+</ng-container>
