@@ -2,13 +2,13 @@
   <label>
     <select name="language" (change)="getWeather()" [(ngModel)]="selectedCity" required>
       <option selected disabled>Выберите город</option>
-      <option *ngFor="let city of cities$ | async">
+      <option *ngFor="let city of cities">
         {{ city.name }}
       </option>
     </select>
   </label>
 </form>
-<ng-container *ngIf="weather$ | async as weatherData">
+<ng-container *ngIf="weatherData">
   <div *ngFor="let day of weatherData.days; let i = index">
   <span>
     {{day}}:
