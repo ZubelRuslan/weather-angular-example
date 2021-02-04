@@ -1,53 +1,45 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {BehaviorSubject, Observable, Subject, Subscription} from 'rxjs';
+import {combineLatest, Observable, Subject} from 'rxjs';
 
 import {City} from '../interfaces/city.interface';
 import {WeatherService} from '../weather.service';
 import {Weather} from '../interfaces/weather.interface';
-import {map} from 'rxjs/operators';
+import {switchMap} from 'rxjs/operators';
 
 @Component({
   selector: 'app-city',
   templateUrl: './city.component.html',
   styleUrls: ['./city.component.scss']
 })
-export class CityComponent implements OnInit, OnDestroy {
-  constructor(private weatherService: WeatherService) { }
+export class CityComponent implements OnInit {
 
-  cities: City[];
-  cities$: Subscription;
-  weatherData$: Observable<Observable<Weather>>;
-  selectedCity: City;
-  city$: Subject<any> = new BehaviorSubject('');
+  constructor(private weatherService: WeatherService) {
+  }
+
+  weather$: Observable<Weather>;
+
+  selectedCity: string;
+
+  selectedCity$: Subject<string> = new Subject<string>();
+
+  cities$: Observable<City[]> = this.weatherService.getCities();
 
   ngOnInit(): void {
-    this.cities$ = this.getCities().subscribe(cities => {
-      this.cities = cities;
-    });
 
-    this.weatherData$ = this.city$.pipe(
-      map((cityData: any) => {
-        if (cityData) {
-          return this.weatherService.getWeather(cityData.lat, cityData.lng);
-        }
+    this.weather$ = combineLatest([this.cities$, this.selectedCity$]).pipe(
+      switchMap(([cities, selectedCity]: [City[], string]): Observable<Weather> => {
+        const city = this.findCity(selectedCity, cities);
+        return this.weatherService.getWeather(city.lat, city.lng);
       })
     );
   }
 
-  getCities(): Observable<City[]> {
-    return this.weatherService.getCities();
-  }
-
-  findCity(name): City {
-    return this.cities.find(elem => elem.name === name);
+  private findCity(name: string, cities: City[]): City {
+    return cities.find(elem => elem.name === name);
   }
 
   getWeather(): void {
-    const cityData: City = this.findCity(this.selectedCity);
-    this.city$.next(cityData);
+    this.selectedCity$.next(this.selectedCity);
   }
 
-  ngOnDestroy(): void {
-      this.cities$.unsubscribe();
-  }
 }
